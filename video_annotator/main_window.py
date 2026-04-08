@@ -103,7 +103,7 @@ class MainWindow(QMainWindow):
         center = QWidget()
         center_layout = QVBoxLayout(center)
         center_layout.setContentsMargins(0, 0, 0, 0)
-        self._player = PlayerPanel()
+        self._player = PlayerPanel(settings=self._settings)
         self._transport = TransportBar()
         self._timeline = TimelineWidget()
         center_layout.addWidget(self._player, stretch=4)
@@ -182,6 +182,7 @@ class MainWindow(QMainWindow):
             ("D",             self._mark_done),
             ("S",             self._mark_skipped),
             ("T",             self._side.focus_tag_input),
+            ("Delete",        self._delete_selected_segment),
             ("+",             self._timeline.zoom_in),
             ("=",             self._timeline.zoom_in),
             ("-",             self._timeline.zoom_out),
@@ -241,7 +242,7 @@ class MainWindow(QMainWindow):
         # Timeline → seek + trim + rubber band
         self._timeline.seek_requested.connect(self._playback.seek_absolute)
         self._timeline.segment_trim_requested.connect(self._on_segment_trim)
-        self._timeline.segment_selected.connect(self._side.scroll_to_segment)
+        self._timeline.segment_selected.connect(self._side.select_segment)
         self._timeline.in_point_drag_set.connect(self._on_timeline_in_point_drag)
         self._timeline.out_point_drag_set.connect(self._on_timeline_rubber_band)
 
@@ -409,10 +410,12 @@ class MainWindow(QMainWindow):
     def _mark_done(self) -> None:
         if self._current_video_id:
             self._manager.set_video_status(self._current_video_id, "done")
+            self._next_video()
 
     def _mark_skipped(self) -> None:
         if self._current_video_id:
             self._manager.set_video_status(self._current_video_id, "skipped")
+            self._next_video()
 
     # ------------------------------------------------------------------
     # ProjectManager signal handlers
@@ -480,6 +483,11 @@ class MainWindow(QMainWindow):
 
     def _on_segment_delete(self, segment_id: str) -> None:
         if self._current_video_id:
+            self._manager.delete_segment(self._current_video_id, segment_id)
+
+    def _delete_selected_segment(self) -> None:
+        segment_id = self._side.selected_segment_id
+        if segment_id and self._current_video_id:
             self._manager.delete_segment(self._current_video_id, segment_id)
 
     def _on_segment_trim(self, segment_id: str, new_start: float, new_end: float) -> None:

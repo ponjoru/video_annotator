@@ -125,5 +125,13 @@ class SidePanel(QWidget):
         """Called by T shortcut to focus the video-level tag field."""
         self._video_tag_editor.focus_input()
 
+    @property
+    def selected_segment_id(self) -> str | None:
+        return self._segment_list.selected_segment_id
+
+    def select_segment(self, segment_id: str) -> None:
+        """Highlight the row for *segment_id* and scroll it into view."""
+        self._segment_list.select_segment(segment_id)
+
     def scroll_to_segment(self, segment_id: str) -> None:
         self._segment_list.scroll_to_segment(segment_id)

@@ -76,6 +76,22 @@ class SettingsPanel(QDialog):
 
         layout.addWidget(export_group)
 
+        # --- Player backend group ---
+        player_group = QGroupBox("Video Player")
+        player_form = QFormLayout(player_group)
+
+        self._backend_combo = QComboBox()
+        self._backend_combo.addItem("Embedded player (recommended)", "qt_multimedia")
+        self._backend_combo.addItem("External mpv window (legacy)", "mpv_subprocess")
+        player_form.addRow("Player backend:", self._backend_combo)
+
+        from PySide6.QtWidgets import QLabel
+        note = QLabel("Restart required to apply backend change.")
+        note.setStyleSheet("color: #888; font-size: 11px;")
+        player_form.addRow("", note)
+
+        layout.addWidget(player_group)
+
         # --- Dialog buttons ---
         buttons = QDialogButtonBox(
             QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel
@@ -99,6 +115,9 @@ class SettingsPanel(QDialog):
         idx = self._vtb_combo.findData(self._settings.use_videotoolbox)
         self._vtb_combo.setCurrentIndex(max(0, idx))
 
+        idx = self._backend_combo.findData(self._settings.player_backend)
+        self._backend_combo.setCurrentIndex(max(0, idx))
+
     def _apply_and_accept(self) -> None:
         self._settings.min_segment_duration = self._min_dur_spin.value()
         self._settings.max_segment_duration_warning = self._max_dur_spin.value()
@@ -106,5 +125,6 @@ class SettingsPanel(QDialog):
         self._settings.reencode_crf = self._crf_spin.value()
         self._settings.reencode_preset = self._preset_combo.currentData()
         self._settings.use_videotoolbox = self._vtb_combo.currentData()
+        self._settings.player_backend = self._backend_combo.currentData()
         self._settings.sync()
         self.accept()

@@ -95,6 +95,18 @@ class SettingsManager:
     def last_source_folder(self, value: str) -> None:
         self._qs.setValue("last_source_folder", value)
 
+    # --- Player backend ---
+
+    @property
+    def player_backend(self) -> str:
+        """'qt_multimedia' (default, embedded) | 'mpv_subprocess' (legacy separate window)."""
+        return str(self._qs.value("player_backend", "qt_multimedia"))
+
+    @player_backend.setter
+    def player_backend(self, value: str) -> None:
+        assert value in ("qt_multimedia", "mpv_subprocess")
+        self._qs.setValue("player_backend", value)
+
     def sync(self) -> None:
         """Force flush to disk (normally QSettings does this automatically)."""
         self._qs.sync()

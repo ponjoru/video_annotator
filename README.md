@@ -46,10 +46,19 @@ pip install -e .                  # runtime only
 pip install -r requirements-dev.txt  # + dev tools (pytest, ruff, mypy)
 ```
 
-### 4. Install system dependencies (macOS)
+### 4. Install system dependencies
 
+**macOS:**
 ```bash
-brew install mpv ffmpeg
+brew install ffmpeg
+# mpv is optional — only needed if you switch to the legacy external-window backend
+brew install mpv
+```
+
+**Ubuntu / Debian:**
+```bash
+sudo apt install ffmpeg gstreamer1.0-plugins-base gstreamer1.0-libav
+# GStreamer plugins are required for H.264/HEVC playback via Qt Multimedia
 ```
 
 ### 5. Run

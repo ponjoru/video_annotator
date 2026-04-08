@@ -11,6 +11,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from PySide6.QtCore import Qt, Signal
+from PySide6.QtGui import QColor, QPalette
 from PySide6.QtWidgets import (
     QHBoxLayout,
     QLabel,
@@ -56,7 +57,11 @@ class SegmentRow(QWidget):
     ) -> None:
         super().__init__(parent)
         self._segment_id = segment.id
+        self._overlaps = overlaps
+        self._selected = False
         self._tag_editor: TagEditor
+        # Required so setStyleSheet background actually paints on a plain QWidget.
+        self.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
         self._build_ui(segment, overlaps)
 
     def set_vocabulary(self, vocabulary: list[str]) -> None:
@@ -114,10 +119,28 @@ class SegmentRow(QWidget):
         self.set_overlap_style(overlaps)
 
     def set_overlap_style(self, overlaps: bool) -> None:
-        if overlaps:
-            self.setStyleSheet("SegmentRow { background-color: #4a3a00; border-radius: 3px; }")
+        self._overlaps = overlaps
+        self._apply_style()
+
+    def set_selected(self, selected: bool) -> None:
+        self._selected = selected
+        self._apply_style()
+
+    def _apply_style(self) -> None:
+        if self._selected:
+            self.setStyleSheet(
+                "SegmentRow { background-color: #1c3f6e;"
+                " border-left: 3px solid #2980B9;"
+                " border-radius: 3px; }"
+            )
+        elif self._overlaps:
+            self.setStyleSheet(
+                "SegmentRow { background-color: #4a3a00;"
+                " border-left: 3px solid #F39C12;"
+                " border-radius: 3px; }"
+            )
         else:
-            self.setStyleSheet("")
+            self.setStyleSheet("SegmentRow { border-left: 3px solid transparent; }")
 
 
 class SegmentList(QWidget):
@@ -133,6 +156,7 @@ class SegmentList(QWidget):
         super().__init__(parent)
         self._rows: dict[str, SegmentRow] = {}
         self._vocabulary: list[str] = []
+        self._selected_id: str | None = None
         self._build_ui()
 
     def _build_ui(self) -> None:
@@ -159,6 +183,7 @@ class SegmentList(QWidget):
             self._inner_layout.removeWidget(row)
             row.deleteLater()
         self._rows = {}
+        self._selected_id = None
 
         overlapping = _compute_overlaps(segments)
 
@@ -180,6 +205,22 @@ class SegmentList(QWidget):
         self._vocabulary = vocabulary
         for row in self._rows.values():
             row.set_vocabulary(vocabulary)
+
+    @property
+    def selected_segment_id(self) -> str | None:
+        return self._selected_id
+
+    def select_segment(self, segment_id: str) -> None:
+        """Highlight *segment_id* and clear the previous selection."""
+        if self._selected_id and self._selected_id != segment_id:
+            prev = self._rows.get(self._selected_id)
+            if prev:
+                prev.set_selected(False)
+        self._selected_id = segment_id
+        row = self._rows.get(segment_id)
+        if row:
+            row.set_selected(True)
+            self._scroll.ensureWidgetVisible(row)
 
     def scroll_to_segment(self, segment_id: str) -> None:
         row = self._rows.get(segment_id)
