@@ -1,0 +1,59 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.egg-info/
+*.egg
+dist/
+build/
+.eggs/
+
+# Virtual environments
+venv/
+.venv/
+env/
+.env/
+
+# Testing / coverage
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+
+# Type checking
+.mypy_cache/
+
+# Linting
+.ruff_cache/
+
+# PyInstaller
+*.spec
+dist/
+build/
+
+# macOS
+.DS_Store
+.AppleDouble
+*.icloud
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Project-specific
+# Waveform cache files (re-generated on demand)
+waveform_cache/
+*.npy
+
+# mpv screenshots taken during dev
+mpv-shot*.jpg
+mpv-shot*.png
+
+# Session files (user data, not committed)
+.video_annotator_session.json
+
+# Export logs
+export_log.txt

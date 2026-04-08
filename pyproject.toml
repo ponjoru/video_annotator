@@ -1,0 +1,50 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.backends.legacy:build"
+
+[project]
+name = "video-annotator"
+version = "0.1.0"
+description = "Fast video segment annotation tool for ML dataset preparation"
+requires-python = ">=3.11"
+dependencies = [
+    "PySide6>=6.7",
+    "python-mpv>=1.0.6",
+    "numpy>=1.26",
+]
+
+[project.scripts]
+video-annotator = "video_annotator.__main__:main"
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0",
+    "pytest-qt>=4.4",
+    "ruff>=0.4",
+    "mypy>=1.10",
+]
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["video_annotator*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-v"
+
+[tool.ruff]
+target-version = "py311"
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "UP"]
+ignore = ["E501"]
+
+[tool.mypy]
+python_version = "3.11"
+strict = true
+exclude = ["tests/"]
+# Stubs not available for all Qt bindings; ignore missing for PySide6
+[[tool.mypy.overrides]]
+module = ["PySide6.*", "mpv"]
+ignore_missing_imports = true
