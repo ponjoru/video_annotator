@@ -238,6 +238,7 @@ class MainWindow(QMainWindow):
         self._transport.play_pause_clicked.connect(self._playback.play_pause)
         self._transport.speed_selected.connect(self._playback.set_speed)
         self._transport.volume_changed.connect(self._player.set_volume)
+        self._transport.seek_requested.connect(self._playback.seek_absolute)
 
         # Timeline → seek + trim + rubber band
         self._timeline.seek_requested.connect(self._playback.seek_absolute)

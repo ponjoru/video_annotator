@@ -7,6 +7,7 @@ from PySide6.QtGui import QFont
 from PySide6.QtWidgets import (
     QHBoxLayout,
     QLabel,
+    QLineEdit,
     QPushButton,
     QSizePolicy,
     QSlider,
@@ -14,9 +15,87 @@ from PySide6.QtWidgets import (
 )
 
 from video_annotator.ui.player_panel import SPEED_LEVELS
-from video_annotator.utils.time_fmt import seconds_to_hms
+from video_annotator.utils.time_fmt import hms_to_seconds, seconds_to_hms
 
 _SPEED_LABELS = {1.0: "1×", 1.5: "1.5×", 2.0: "2×", 4.0: "4×", 8.0: "8×"}
+
+
+class _TimestampEdit(QLineEdit):
+    """Monospaced timestamp field. Shows HH:MM:SS.mmm / duration.
+    Click to edit the current-position portion; Enter or blur commits the seek.
+    """
+
+    seek_requested = Signal(float)
+
+    def __init__(self, font: QFont, parent: QWidget | None = None) -> None:
+        super().__init__(parent)
+        self._duration: float = 0.0
+        self._position: float = 0.0
+        self._editing = False
+        self.setFont(font)
+        self.setMinimumWidth(220)
+        self.setReadOnly(True)
+        self.setFrame(False)
+        self.setStyleSheet("QLineEdit { background: transparent; border: none; }")
+        self.editingFinished.connect(self._commit)
+
+    def set_position(self, position: float) -> None:
+        self._position = position
+        if not self._editing:
+            self._refresh_text()
+
+    def set_duration(self, duration: float) -> None:
+        self._duration = duration
+        if not self._editing:
+            self._refresh_text()
+
+    # --- Internal ---
+
+    def _refresh_text(self) -> None:
+        self.setText(
+            f"{seconds_to_hms(self._position)} / {seconds_to_hms(self._duration)}"
+        )
+
+    def mousePressEvent(self, event) -> None:  # type: ignore[override]
+        if self.isReadOnly():
+            self._editing = True
+            self.setReadOnly(False)
+            self.setFrame(True)
+            self.setStyleSheet(
+                "QLineEdit { background: palette(base); border: 1px solid #2980B9; }"
+            )
+            # Select only the position portion (before " / ")
+            self.setText(seconds_to_hms(self._position))
+            self.selectAll()
+        super().mousePressEvent(event)
+
+    def _commit(self) -> None:
+        if not self._editing:
+            return
+        try:
+            seconds = hms_to_seconds(self.text().strip())
+            seconds = max(0.0, min(seconds, self._duration))
+            self._position = seconds
+            self.seek_requested.emit(seconds)
+        except ValueError:
+            pass  # invalid input — restore previous value
+        finally:
+            self._editing = False
+            self.setReadOnly(True)
+            self.setFrame(False)
+            self.setStyleSheet("QLineEdit { background: transparent; border: none; }")
+            self._refresh_text()
+            # Return focus to the top-level window so keyboard shortcuts work again.
+            top = self.window()
+            if top:
+                top.setFocus()
+
+    def keyPressEvent(self, event) -> None:  # type: ignore[override]
+        if event.key() == Qt.Key.Key_Escape:
+            self._editing = False  # discard; _commit will restore
+            self.clearFocus()
+        else:
+            super().keyPressEvent(event)
 
 
 class TransportBar(QWidget):
@@ -24,6 +103,7 @@ class TransportBar(QWidget):
     play_pause_clicked = Signal()
     speed_selected = Signal(float)      # one of SPEED_LEVELS
     volume_changed = Signal(int)        # 0–100
+    seek_requested = Signal(float)      # seconds — from timestamp edit
 
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
@@ -45,14 +125,14 @@ class TransportBar(QWidget):
 
         layout.addSpacing(4)
 
-        # Timestamp label — monospaced so the digits don't jump around
-        self._timestamp = QLabel("00:00:00.000 / 00:00:00.000")
+        # Timestamp — editable; click to seek to a specific time
         mono = QFont("Menlo")
         if not mono.exactMatch():
             mono = QFont("Courier New")
         mono.setPointSize(11)
-        self._timestamp.setFont(mono)
-        self._timestamp.setMinimumWidth(220)
+        self._timestamp = _TimestampEdit(mono)
+        self._timestamp.setToolTip("Click to enter a timestamp and seek")
+        self._timestamp.seek_requested.connect(self.seek_requested)
         layout.addWidget(self._timestamp)
 
         # Stretch separates timestamp from speed buttons
@@ -89,15 +169,11 @@ class TransportBar(QWidget):
     # ------------------------------------------------------------------
 
     def on_position_changed(self, position: float) -> None:
-        self._timestamp.setText(
-            f"{seconds_to_hms(position)} / {seconds_to_hms(self._duration)}"
-        )
+        self._timestamp.set_position(position)
 
     def on_duration_known(self, duration: float) -> None:
         self._duration = duration
-        self._timestamp.setText(
-            f"{seconds_to_hms(0.0)} / {seconds_to_hms(duration)}"
-        )
+        self._timestamp.set_duration(duration)
 
     def on_speed_changed(self, speed: float) -> None:
         """Highlight the active speed button; uncheck all others."""
